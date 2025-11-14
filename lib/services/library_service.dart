@@ -2,21 +2,19 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:intl/intl.dart';
 import '../models/book.dart';
-import 'credentials_service.dart';
 
 class LibraryService {
-  final CredentialsService _credentialsService = CredentialsService();
   final String _loginUrl =
       "https://kedumim.libraries.co.il/BuildaGate5library/general2/xaction.php?ActionID=1";
   final String _booksUrl =
       "https://kedumim.libraries.co.il/BuildaGate5library/general/library_user_report_personal.php?SiteName=LIB_kedumim&CNumber=318119515&Clubtmp1=5SKNQWLVRU86B861&lan=en&ItemID=318119515&TPLItemID=&Card=Card6";
 
   /// Fetches the list of loaned books from the library website
-  Future<List<Book>> fetchBooks() async {
+  Future<List<Book>> fetchBooks(String username, String password) async {
     try {
       // Step 1: Login and get session
       final client = http.Client();
-      final cookies = await _login(client);
+      final cookies = await _login(client, username, password);
 
       // Step 2: Fetch books page with session
       final booksPage = await _fetchBooksPage(client, cookies);
@@ -32,10 +30,11 @@ class LibraryService {
   }
 
   /// Performs login and returns session cookies
-  Future<String> _login(http.Client client) async {
-    final username = _credentialsService.getUsername();
-    final password = _credentialsService.getPassword();
-
+  Future<String> _login(
+    http.Client client,
+    String username,
+    String password,
+  ) async {
     final response = await client.post(
       Uri.parse(_loginUrl),
       headers: {

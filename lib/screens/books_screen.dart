@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../services/library_service.dart';
+import '../services/credentials_service.dart';
 
 class BooksScreen extends StatefulWidget {
   const BooksScreen({super.key});
@@ -11,6 +12,7 @@ class BooksScreen extends StatefulWidget {
 
 class _BooksScreenState extends State<BooksScreen> {
   final LibraryService _libraryService = LibraryService();
+  final CredentialsService _credentialsService = CredentialsService();
   List<Book> _books = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -28,7 +30,15 @@ class _BooksScreenState extends State<BooksScreen> {
     });
 
     try {
-      final books = await _libraryService.fetchBooks();
+      // Get stored credentials
+      final username = await _credentialsService.getUsername();
+      final password = await _credentialsService.getPassword();
+
+      if (username == null || password == null) {
+        throw Exception('No credentials found');
+      }
+
+      final books = await _libraryService.fetchBooks(username, password);
       // Sort by days remaining in ascending order (urgent books first)
       books.sort((a, b) => a.daysRemaining.compareTo(b.daysRemaining));
       setState(() {

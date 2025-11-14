@@ -1,22 +1,37 @@
-/// Service for managing user credentials.
-/// Currently returns hardcoded credentials, but designed to be easily
-/// extended with a login page or secure storage in the future.
-class CredentialsService {
-  // TODO: Replace with login page or secure storage
-  String getUsername() => "זמיריא0300";
-  String getPassword() => "0542585557";
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-  // Future implementation example:
-  // String? _username;
-  // String? _password;
-  //
-  // Future<void> login(String username, String password) async {
-  //   _username = username;
-  //   _password = password;
-  //   // Validate credentials by attempting login
-  // }
-  //
-  // String getUsername() => _username ?? "";
-  // String getPassword() => _password ?? "";
-  // bool isLoggedIn() => _username != null && _password != null;
+/// Service for managing user credentials using secure storage.
+class CredentialsService {
+  static const _storage = FlutterSecureStorage();
+  static const _usernameKey = 'library_username';
+  static const _passwordKey = 'library_password';
+
+  /// Save credentials to secure storage
+  Future<void> saveCredentials(String username, String password) async {
+    await _storage.write(key: _usernameKey, value: username);
+    await _storage.write(key: _passwordKey, value: password);
+  }
+
+  /// Get stored username (returns null if not found)
+  Future<String?> getUsername() async {
+    return await _storage.read(key: _usernameKey);
+  }
+
+  /// Get stored password (returns null if not found)
+  Future<String?> getPassword() async {
+    return await _storage.read(key: _passwordKey);
+  }
+
+  /// Check if credentials are stored
+  Future<bool> hasStoredCredentials() async {
+    final username = await getUsername();
+    final password = await getPassword();
+    return username != null && password != null;
+  }
+
+  /// Clear stored credentials (for logout)
+  Future<void> clearCredentials() async {
+    await _storage.delete(key: _usernameKey);
+    await _storage.delete(key: _passwordKey);
+  }
 }
