@@ -13,6 +13,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final LibraryService _libraryService = LibraryService();
   final CredentialsService _credentialsService = CredentialsService();
+  final ScrollController _scrollController = ScrollController();
   List<HistoryBook> _history = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -21,6 +22,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     _loadHistory();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadHistory() async {
@@ -214,127 +221,217 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return RefreshIndicator(
       onRefresh: _loadHistory,
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.resolveWith(
-                (states) => Colors.grey[200],
-              ),
-              border: TableBorder.all(color: Colors.grey[300]!),
-              columnSpacing: 12,
-              horizontalMargin: 8,
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    '#',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: 900,
+          child: Column(
+            children: [
+              // Header
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  border: Border.all(color: Colors.grey[300]!),
                 ),
-                DataColumn(
-                  label: Text(
-                    'שם הספר',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'מחבר',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'תאריך השאלה',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'תאריך החזרה',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'הוחזר',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
-                ),
-              ],
-              rows: _history.asMap().entries.map((entry) {
-                final index = entry.key;
-                final book = entry.value;
-                Color? rowColor;
-
-                // Color rows based on return status
-                if (book.isReturned) {
-                  rowColor = Colors.green[50];
-                } else {
-                  rowColor = Colors.orange[50];
-                }
-
-                return DataRow(
-                  color: WidgetStateProperty.resolveWith((states) => rowColor),
-                  cells: [
-                    DataCell(
-                      Text(
-                        '${index + 1}',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                    DataCell(
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 250),
+                child: Row(
+                  children: const [
+                    SizedBox(
+                      width: 50,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
                         child: Text(
-                          book.title,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                          style: const TextStyle(fontSize: 11),
+                          '#',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ),
-                    DataCell(
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 150),
+                    SizedBox(
+                      width: 250,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
                         child: Text(
-                          book.author,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                          style: const TextStyle(fontSize: 11),
+                          'שם הספר',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ),
-                    DataCell(
-                      Text(book.loanDate, style: const TextStyle(fontSize: 11)),
-                    ),
-                    DataCell(
-                      Text(book.dueDate, style: const TextStyle(fontSize: 11)),
-                    ),
-                    DataCell(
-                      Row(
-                        children: [
-                          Icon(
-                            book.isReturned ? Icons.check_circle : Icons.cancel,
-                            color: book.isReturned
-                                ? Colors.green
-                                : Colors.orange,
-                            size: 16,
+                    SizedBox(
+                      width: 150,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'מחבר',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            book.returnDate.isNotEmpty ? book.returnDate : '-',
-                            style: const TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 120,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'תאריך השאלה',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
-                        ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 120,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'תאריך החזרה',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 150,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'הוחזר',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                );
-              }).toList(),
-            ),
+                ),
+              ),
+              // Virtual scrolling list
+              Expanded(
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  thickness: 8,
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    itemCount: _history.length,
+                    itemBuilder: (context, index) {
+                      final book = _history[index];
+                      final rowColor = book.isReturned
+                          ? Colors.green[50]
+                          : Colors.orange[50];
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: rowColor,
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[300]!),
+                            left: BorderSide(color: Colors.grey[300]!),
+                            right: BorderSide(color: Colors.grey[300]!),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 50,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 250,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  book.title,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 150,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  book.author,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 120,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  book.loanDate,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 120,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  book.dueDate,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 150,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      book.isReturned
+                                          ? Icons.check_circle
+                                          : Icons.cancel,
+                                      color: book.isReturned
+                                          ? Colors.green
+                                          : Colors.orange,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        book.returnDate.isNotEmpty
+                                            ? book.returnDate
+                                            : '-',
+                                        style: const TextStyle(fontSize: 11),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
