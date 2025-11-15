@@ -103,6 +103,34 @@ class _BooksScreenState extends State<BooksScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('התנתק'),
+        content: const Text('האם אתה בטוח שברצונך להתנתק?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('התנתק'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      await _credentialsService.clearCredentials();
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -117,6 +145,27 @@ class _BooksScreenState extends State<BooksScreen> with WidgetsBindingObserver {
               icon: const Icon(Icons.refresh),
               onPressed: _isLoading ? null : _loadBooks,
               tooltip: 'רענן',
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'תפריט',
+              onSelected: (value) {
+                if (value == 'logout') {
+                  _logout();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('התנתק'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
