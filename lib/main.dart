@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/books_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/history_screen.dart';
 import 'services/credentials_service.dart';
 
 void main() {
@@ -19,6 +20,11 @@ class MainApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const AuthChecker(),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/books': (context) => const BooksScreen(),
+        '/history': (context) => const HistoryScreen(),
+      },
     );
   }
 }

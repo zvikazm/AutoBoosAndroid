@@ -150,11 +150,35 @@ class _BooksScreenState extends State<BooksScreen> with WidgetsBindingObserver {
               icon: const Icon(Icons.more_vert),
               tooltip: 'תפריט',
               onSelected: (value) {
-                if (value == 'logout') {
+                if (value == 'current_loans') {
+                  // Already on this screen, do nothing
+                } else if (value == 'history') {
+                  Navigator.pushNamed(context, '/history');
+                } else if (value == 'logout') {
                   _logout();
                 }
               },
               itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'current_loans',
+                  child: Row(
+                    children: [
+                      Icon(Icons.book),
+                      SizedBox(width: 8),
+                      Text('ספרים מושאלים'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'history',
+                  child: Row(
+                    children: [
+                      Icon(Icons.history),
+                      SizedBox(width: 8),
+                      Text('היסטוריה'),
+                    ],
+                  ),
+                ),
                 const PopupMenuItem(
                   value: 'logout',
                   child: Row(
