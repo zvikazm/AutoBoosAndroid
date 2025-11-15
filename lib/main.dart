@@ -19,8 +19,9 @@ class MainApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const AuthChecker(),
+      initialRoute: '/',
       routes: {
+        '/': (context) => const AuthChecker(),
         '/login': (context) => const LoginScreen(),
         '/books': (context) => const BooksScreen(),
         '/history': (context) => const HistoryScreen(),
@@ -29,31 +30,37 @@ class MainApp extends StatelessWidget {
   }
 }
 
-class AuthChecker extends StatelessWidget {
+class AuthChecker extends StatefulWidget {
   const AuthChecker({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  State<AuthChecker> createState() => _AuthCheckerState();
+}
+
+class _AuthCheckerState extends State<AuthChecker> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
     final credentialsService = CredentialsService();
+    final hasCredentials = await credentialsService.hasStoredCredentials();
 
-    return FutureBuilder<bool>(
-      future: credentialsService.hasStoredCredentials(),
-      builder: (context, snapshot) {
-        // Show loading spinner while checking credentials
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    if (!mounted) return;
 
-        // If credentials exist, go to books screen
-        if (snapshot.data == true) {
-          return const BooksScreen();
-        }
+    // Use pushReplacement to replace the auth checker with the appropriate screen
+    if (hasCredentials) {
+      Navigator.of(context).pushReplacementNamed('/books');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
 
-        // Otherwise, show login screen
-        return const LoginScreen();
-      },
-    );
+  @override
+  Widget build(BuildContext context) {
+    // Show loading spinner while checking credentials
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
