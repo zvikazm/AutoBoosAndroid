@@ -1,10 +1,17 @@
 name: Android APK Build & Release
 
 on:
-  # Trigger on version tags (e.g., v0.1.0, v1.0.0)
+  # Trigger on version tags (e.g., v0.1.0, v1.0.0) or push to main branch
   push:
     tags:
       - 'v*.*.*'
+    branches:
+      - main
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/android-release.yml'
   
   # Allow manual workflow trigger with version input
   workflow_dispatch:
@@ -21,16 +28,6 @@ on:
         options:
           - 'true'
           - 'false'
-  
-  # Build on push to main (without release)
-  push:
-    branches:
-      - main
-    paths:
-      - 'lib/**'
-      - 'android/**'
-      - 'pubspec.yaml'
-      - '.github/workflows/android-release.yml'
 
 jobs:
   build:
