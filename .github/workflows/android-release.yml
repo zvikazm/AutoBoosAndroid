@@ -1,0 +1,155 @@
+name: Android APK Build & Release
+
+on:
+  # Trigger on version tags (e.g., v0.1.0, v1.0.0)
+  push:
+    tags:
+      - 'v*.*.*'
+  
+  # Allow manual workflow trigger with version input
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number for the release (e.g., 0.1.0)'
+        required: true
+        default: '0.1.0'
+      create_release:
+        description: 'Create GitHub release'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  
+  # Build on push to main (without release)
+  push:
+    branches:
+      - main
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/android-release.yml'
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+      
+      - name: Verify Flutter installation
+        run: |
+          flutter --version
+          flutter doctor -v
+      
+      - name: Get dependencies
+        run: flutter pub get
+      
+      - name: Run flutter clean
+        run: flutter clean
+      
+      - name: Build APK
+        run: flutter build apk --release
+      
+      - name: Get version info
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//')
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+      
+      - name: Rename APK
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             build/app/outputs/flutter-apk/auto_books-v${VERSION}.apk
+      
+      - name: Calculate APK checksum
+        id: checksum
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          APK_PATH="build/app/outputs/flutter-apk/auto_books-v${VERSION}.apk"
+          SHA256=$(sha256sum "$APK_PATH" | cut -d' ' -f1)
+          SIZE=$(du -h "$APK_PATH" | cut -f1)
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "APK Size: $SIZE"
+          echo "SHA-256: $SHA256"
+      
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto_books-v${{ steps.version.outputs.version }}-apk
+          path: build/app/outputs/flutter-apk/auto_books-v${{ steps.version.outputs.version }}.apk
+          retention-days: 90
+      
+      - name: Create Release
+        if: |
+          (startsWith(github.ref, 'refs/tags/v') || 
+           (github.event_name == 'workflow_dispatch' && 
+            github.event.inputs.create_release == 'true'))
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', github.event.inputs.version) || github.ref_name }}
+          name: Release v${{ steps.version.outputs.version }}
+          body: |
+            # Auto Books v${{ steps.version.outputs.version }}
+            
+            ## 📱 Android APK Release
+            
+            ### Download
+            - **File**: `auto_books-v${{ steps.version.outputs.version }}.apk`
+            - **Size**: ${{ steps.checksum.outputs.size }}
+            - **SHA-256**: `${{ steps.checksum.outputs.sha256 }}`
+            
+            ### Installation Instructions
+            1. Download the APK file below
+            2. Enable "Install from Unknown Sources" in your Android settings
+            3. Open the downloaded APK file to install
+            4. Launch the app and enter your library credentials
+            
+            ### Features
+            - ✅ Secure credential storage (persists across app updates)
+            - ✅ Hebrew RTL interface
+            - ✅ Auto-login after first-time setup
+            - ✅ Real-time book tracking with urgency indicators
+            - ✅ Pull-to-refresh functionality
+            
+            ### Verify Download (Optional)
+            ```bash
+            sha256sum auto_books-v${{ steps.version.outputs.version }}.apk
+            # Should match: ${{ steps.checksum.outputs.sha256 }}
+            ```
+            
+            ---
+            **Built with GitHub Actions** • [View Build Log](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          files: |
+            build/app/outputs/flutter-apk/auto_books-v${{ steps.version.outputs.version }}.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
