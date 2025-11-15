@@ -14,8 +14,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   final LibraryService _libraryService = LibraryService();
   final CredentialsService _credentialsService = CredentialsService();
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
   List<HistoryBook> _history = [];
+  List<HistoryBook> _filteredHistory = [];
   bool _isLoading = false;
+  bool _isSearching = false;
   String? _errorMessage;
 
   @override
@@ -27,7 +30,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _filterHistory(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredHistory = _history;
+      } else {
+        final lowerQuery = query.toLowerCase();
+        _filteredHistory = _history.where((book) {
+          return book.title.toLowerCase().contains(lowerQuery) ||
+              book.author.toLowerCase().contains(lowerQuery);
+        }).toList();
+      }
+    });
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchController.clear();
+        _filteredHistory = _history;
+      } else {
+        _filteredHistory = _history;
+      }
+    });
   }
 
   Future<void> _loadHistory() async {
@@ -52,6 +82,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
       setState(() {
         _history = history;
+        _filteredHistory = history;
         _isLoading = false;
       });
     } catch (e) {
@@ -103,6 +134,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
           automaticallyImplyLeading: false,
           actions: [
+            IconButton(
+              icon: Icon(_isSearching ? Icons.close : Icons.search),
+              onPressed: _toggleSearch,
+              tooltip: _isSearching ? 'סגור חיפוש' : 'חיפוש',
+            ),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _isLoading ? null : _loadHistory,
@@ -226,6 +262,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
           width: 900,
           child: Column(
             children: [
+              // Search Bar
+              if (_isSearching)
+                Container(
+                  padding: const EdgeInsets.all(8.0),
+                  color: Colors.blue[50],
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: 'חפש לפי שם ספר או מחבר...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _filterHistory('');
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          onChanged: _filterHistory,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'נמצאו ${_filteredHistory.length} מתוך ${_history.length}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
               // Header
               Container(
                 decoration: BoxDecoration(
@@ -323,9 +399,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   thickness: 8,
                   child: ListView.builder(
                     controller: _scrollController,
-                    itemCount: _history.length,
+                    itemCount: _filteredHistory.length,
                     itemBuilder: (context, index) {
-                      final book = _history[index];
+                      final book = _filteredHistory[index];
                       final rowColor = book.isReturned
                           ? Colors.green[50]
                           : Colors.orange[50];
