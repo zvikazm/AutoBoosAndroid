@@ -10,17 +10,49 @@ class BooksScreen extends StatefulWidget {
   State<BooksScreen> createState() => _BooksScreenState();
 }
 
-class _BooksScreenState extends State<BooksScreen> {
+class _BooksScreenState extends State<BooksScreen> with WidgetsBindingObserver {
   final LibraryService _libraryService = LibraryService();
   final CredentialsService _credentialsService = CredentialsService();
   List<Book> _books = [];
   bool _isLoading = false;
   String? _errorMessage;
+  DateTime? _lastRefreshTime;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadBooks();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_shouldAutoRefresh()) {
+        _loadBooks();
+      }
+    }
+  }
+
+  bool _shouldAutoRefresh() {
+    if (_lastRefreshTime == null) return false;
+
+    final now = DateTime.now();
+    final hoursSinceRefresh = now.difference(_lastRefreshTime!).inHours;
+
+    // Refresh if more than 24 hours old
+    if (hoursSinceRefresh >= 24) return true;
+
+    // Refresh if it's a new day (even if less than 24 hours)
+    if (_lastRefreshTime!.day != now.day) return true;
+
+    return false;
   }
 
   Future<void> _loadBooks() async {
@@ -44,12 +76,30 @@ class _BooksScreenState extends State<BooksScreen> {
       setState(() {
         _books = books;
         _isLoading = false;
+        _lastRefreshTime = DateTime.now();
       });
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  String _getLastRefreshText() {
+    if (_lastRefreshTime == null) return '';
+
+    final now = DateTime.now();
+    final difference = now.difference(_lastRefreshTime!);
+
+    if (difference.inMinutes < 1) {
+      return 'עודכן כעת';
+    } else if (difference.inMinutes < 60) {
+      return 'עודכן לפני ${difference.inMinutes} דקות';
+    } else if (difference.inHours < 24) {
+      return 'עודכן לפני ${difference.inHours} שעות';
+    } else {
+      return 'עודכן לפני ${difference.inDays} ימים';
     }
   }
 
@@ -133,147 +183,171 @@ class _BooksScreenState extends State<BooksScreen> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadBooks,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.resolveWith(
-                (states) => Colors.grey[200],
-              ),
-              border: TableBorder.all(color: Colors.grey[300]!),
-              columnSpacing: 12,
-              horizontalMargin: 8,
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    '#',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'שם הספר',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'תאריך',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        'החזרה',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                DataColumn(
-                  label: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'ימים',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        'שנותרו',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+    return Column(
+      children: [
+        if (_lastRefreshTime != null)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            color: Colors.grey[100],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 6),
+                Text(
+                  _getLastRefreshText(),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
-              rows: _books.asMap().entries.map((entry) {
-                final index = entry.key;
-                final book = entry.value;
-                Color? rowColor;
-                switch (book.status) {
-                  case BookStatus.urgent:
-                    rowColor = Colors.red[50];
-                    break;
-                  case BookStatus.soon:
-                    rowColor = Colors.yellow[50];
-                    break;
-                  case BookStatus.ok:
-                    rowColor = Colors.green[50];
-                    break;
-                }
+            ),
+          ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadBooks,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.resolveWith(
+                      (states) => Colors.grey[200],
+                    ),
+                    border: TableBorder.all(color: Colors.grey[300]!),
+                    columnSpacing: 12,
+                    horizontalMargin: 8,
+                    columns: const [
+                      DataColumn(
+                        label: Text(
+                          '#',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'שם הספר',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'תאריך',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'החזרה',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataColumn(
+                        label: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'ימים',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'שנותרו',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    rows: _books.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final book = entry.value;
+                      Color? rowColor;
+                      switch (book.status) {
+                        case BookStatus.urgent:
+                          rowColor = Colors.red[50];
+                          break;
+                        case BookStatus.soon:
+                          rowColor = Colors.yellow[50];
+                          break;
+                        case BookStatus.ok:
+                          rowColor = Colors.green[50];
+                          break;
+                      }
 
-                return DataRow(
-                  color: WidgetStateProperty.resolveWith((states) => rowColor),
-                  cells: [
-                    DataCell(
-                      Text(
-                        '${index + 1}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                      return DataRow(
+                        color: WidgetStateProperty.resolveWith(
+                          (states) => rowColor,
                         ),
-                      ),
-                    ),
-                    DataCell(
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 200),
-                        child: Text(
-                          book.title,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        book.expireDate,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    DataCell(
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            book.status.emoji,
-                            style: const TextStyle(fontSize: 16),
+                        cells: [
+                          DataCell(
+                            Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
-                          Text(
-                            '${book.daysRemaining}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                          DataCell(
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 200),
+                              child: Text(
+                                book.title,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              book.expireDate,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          DataCell(
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  book.status.emoji,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                Text(
+                                  '${book.daysRemaining}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
