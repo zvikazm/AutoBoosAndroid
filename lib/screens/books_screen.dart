@@ -153,7 +153,7 @@ class _BooksScreenState extends State<BooksScreen> with WidgetsBindingObserver {
                 if (value == 'current_loans') {
                   // Already on this screen, do nothing
                 } else if (value == 'history') {
-                  Navigator.pushNamed(context, '/history');
+                  Navigator.pushReplacementNamed(context, '/history');
                 } else if (value == 'logout') {
                   _logout();
                 }

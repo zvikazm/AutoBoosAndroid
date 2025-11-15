@@ -57,6 +57,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('התנתק'),
+        content: const Text('האם אתה בטוח שברצונך להתנתק?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('התנתק'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      await _credentialsService.clearCredentials();
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -66,11 +94,57 @@ class _HistoryScreenState extends State<HistoryScreen> {
           title: const Text('היסטוריית השאלות'),
           centerTitle: true,
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          automaticallyImplyLeading: false,
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _isLoading ? null : _loadHistory,
               tooltip: 'רענן',
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'תפריט',
+              onSelected: (value) {
+                if (value == 'current_loans') {
+                  Navigator.pushReplacementNamed(context, '/books');
+                } else if (value == 'history') {
+                  // Already on this screen, do nothing
+                } else if (value == 'logout') {
+                  _logout();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'current_loans',
+                  child: Row(
+                    children: [
+                      Icon(Icons.book),
+                      SizedBox(width: 8),
+                      Text('ספרים מושאלים'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'history',
+                  child: Row(
+                    children: [
+                      Icon(Icons.history),
+                      SizedBox(width: 8),
+                      Text('היסטוריה'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('התנתק'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
