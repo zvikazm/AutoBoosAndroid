@@ -3,8 +3,14 @@ import 'screens/books_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/history_screen.dart';
 import 'services/credentials_service.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notification service
+  await NotificationService().initialize();
+
   runApp(const MainApp());
 }
 

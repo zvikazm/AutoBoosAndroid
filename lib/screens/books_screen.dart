@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../services/library_service.dart';
 import '../services/credentials_service.dart';
+import '../services/notification_service.dart';
 
 class BooksScreen extends StatefulWidget {
   const BooksScreen({super.key});
@@ -78,6 +79,9 @@ class _BooksScreenState extends State<BooksScreen> with WidgetsBindingObserver {
         _isLoading = false;
         _lastRefreshTime = DateTime.now();
       });
+
+      // Check for urgent books and show notification
+      await NotificationService().showUrgentBooksNotification(books);
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
