@@ -102,10 +102,16 @@ class LibraryService {
           final loanDate = cells[3].text.trim();
           final expireDate = cells[4].text.trim();
 
-          // Calculate days remaining
+          // Calculate days remaining - compare dates only (ignore time)
           final returnDate = DateFormat('dd.MM.yyyy').parse(expireDate);
           final now = DateTime.now();
-          final daysRemaining = returnDate.difference(now).inDays;
+          final today = DateTime(now.year, now.month, now.day);
+          final returnDateOnly = DateTime(
+            returnDate.year,
+            returnDate.month,
+            returnDate.day,
+          );
+          final daysRemaining = returnDateOnly.difference(today).inDays;
 
           // Create book object
           final book = Book.fromData(
