@@ -79,9 +79,6 @@ class _BooksScreenState extends State<BooksScreen> with WidgetsBindingObserver {
         _isLoading = false;
         _lastRefreshTime = DateTime.now();
       });
-
-      // Check for urgent books and show notification
-      await NotificationService().showUrgentBooksNotification(books);
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();

@@ -4,12 +4,16 @@ import 'screens/login_screen.dart';
 import 'screens/history_screen.dart';
 import 'services/credentials_service.dart';
 import 'services/notification_service.dart';
+import 'services/background_task_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize notification service
   await NotificationService().initialize();
+
+  // Initialize background task service for daily notifications at 8:00 AM
+  await BackgroundTaskService.initialize();
 
   runApp(const MainApp());
 }
