@@ -1,0 +1,105 @@
+name: Android Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+      
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          # Get the latest tag, or use v0 if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Extract number from tag (e.g., v5 -> 5)
+          VERSION_NUMBER=${LATEST_TAG#v}
+          
+          # Increment version
+          NEW_VERSION=$((VERSION_NUMBER + 1))
+          NEW_TAG="v$NEW_VERSION"
+          
+          echo "New tag: $NEW_TAG"
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      
+      - name: Get dependencies
+        run: flutter pub get
+      
+      - name: Update version in pubspec.yaml
+        run: |
+          sed -i "s/^version: .*/version: 0.${{ steps.get_tag.outputs.version }}.0/" pubspec.yaml
+          cat pubspec.yaml | grep version
+      
+      - name: Update version in build.gradle.kts
+        run: |
+          sed -i "s/versionCode = .*/versionCode = ${{ steps.get_tag.outputs.version }}/" android/app/build.gradle.kts
+          sed -i "s/versionName = .*/versionName = \"${{ steps.get_tag.outputs.tag }}\"/" android/app/build.gradle.kts
+      
+      - name: Build APK
+        run: flutter build apk --release
+      
+      - name: Rename APK
+        run: |
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             build/app/outputs/flutter-apk/auto-books-${{ steps.get_tag.outputs.tag }}.apk
+      
+      - name: Create Git tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag ${{ steps.get_tag.outputs.tag }}
+          git push origin ${{ steps.get_tag.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: Release ${{ steps.get_tag.outputs.tag }}
+          body: |
+            ## Auto Books - Version ${{ steps.get_tag.outputs.tag }}
+            
+            ### What's New
+            Automatic build from commit ${{ github.sha }}
+            
+            ### Download
+            - Download the APK file below and install on your Android device
+            - Requires Android 5.0 (API 21) or higher
+            
+            ### Installation
+            1. Download `auto-books-${{ steps.get_tag.outputs.tag }}.apk`
+            2. Enable "Install from Unknown Sources" in your Android settings
+            3. Open the APK file to install
+            
+            **Build Date**: ${{ github.event.head_commit.timestamp }}
+            **Commit**: ${{ github.sha }}
+          draft: false
+          prerelease: false
+          files: |
+            build/app/outputs/flutter-apk/auto-books-${{ steps.get_tag.outputs.tag }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
