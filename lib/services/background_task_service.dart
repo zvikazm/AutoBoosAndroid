@@ -26,7 +26,6 @@ class BackgroundTaskService {
       frequency: const Duration(hours: 24),
       initialDelay: _calculateInitialDelay(),
       constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingWorkPolicy.replace,
     );
   }
 
