@@ -18,20 +18,26 @@ jobs:
       - name: Get latest tag
         id: get_tag
         run: |
-          # Get the latest tag, or use v0 if no tags exist
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0")
+          # Get the latest tag, or use v0.0.0 if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "Latest tag: $LATEST_TAG"
           
-          # Extract number from tag (e.g., v5 -> 5)
-          VERSION_NUMBER=${LATEST_TAG#v}
+          # Extract version parts (e.g., v0.1.10 -> 0 1 10)
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -ra PARTS <<< "$VERSION"
+          MAJOR=${PARTS[0]:-0}
+          MINOR=${PARTS[1]:-0}
+          PATCH=${PARTS[2]:-0}
           
-          # Increment version
-          NEW_VERSION=$((VERSION_NUMBER + 1))
-          NEW_TAG="v$NEW_VERSION"
+          # Increment patch version
+          NEW_PATCH=$((PATCH + 1))
+          NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          NEW_VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + NEW_PATCH))
           
           echo "New tag: $NEW_TAG"
           echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "version_name=${MAJOR}.${MINOR}.${NEW_PATCH}" >> $GITHUB_OUTPUT
       
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -50,7 +56,7 @@ jobs:
       
       - name: Update version in pubspec.yaml
         run: |
-          sed -i "s/^version: .*/version: 0.${{ steps.get_tag.outputs.version }}.0/" pubspec.yaml
+          sed -i "s/^version: .*/version: ${{ steps.get_tag.outputs.version_name }}/" pubspec.yaml
           cat pubspec.yaml | grep version
       
       - name: Update version in build.gradle.kts
