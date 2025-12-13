@@ -85,10 +85,7 @@ class LibraryService {
     }
 
     // The loan books table is nested inside the 4th table (index 3)
-    final loanBooksTable = tables[3].querySelector('table');
-    if (loanBooksTable == null) {
-      return []; // No books loaned
-    }
+    final loanBooksTable = tables[3];
 
     final rows = loanBooksTable.querySelectorAll('tr');
     final books = <Book>[];
